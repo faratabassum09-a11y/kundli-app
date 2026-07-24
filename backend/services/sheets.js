@@ -1,14 +1,16 @@
 const { google } = require('googleapis');
-const path = require('path');
 
 const SHEET_ID = process.env.GOOGLE_SHEET_ID;
 const SHEET_NAME = 'Sheet1';
 
 async function getAuthClient() {
+  const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
+
   const auth = new google.auth.GoogleAuth({
-    keyFile: path.join(__dirname, '../credentials.json'),
+    credentials,
     scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
   });
+
   return auth.getClient();
 }
 
