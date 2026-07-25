@@ -1,15 +1,15 @@
 const express = require('express');
 const router  = express.Router();
 const { sendToPabbly } = require('../services/pabbly');
-const { getAllClients } = require('../services/sheets');
+const { getAllClients, invalidateClientsCache } = require('../services/sheets');
 
 // POST /api/clients
-// Called by the React ClientForm.jsx when the user submits the form.
-// Forwards data to Pabbly Connect, which then writes the row into
-// Google Sheets (and runs any other actions in that workflow).
 router.post('/', async (req, res) => {
   try {
     await sendToPabbly(req.body);
+    // The sheet is about to get a new row from Pabbly — drop the cache
+    // so the upcoming poll loop sees fresh data instead of the pre-registration list.
+    invalidateClientsCache();
     res.json({ success: true, message: 'Sent to Pabbly Connect' });
   } catch (err) {
     console.error('Pabbly forward error:', err.message);
@@ -18,7 +18,6 @@ router.post('/', async (req, res) => {
 });
 
 // GET /api/clients
-// Reads clients back from Google Sheets (after Pabbly has written them)
 router.get('/', async (req, res) => {
   try {
     const clients = await getAllClients();
