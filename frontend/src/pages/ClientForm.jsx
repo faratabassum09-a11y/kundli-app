@@ -32,6 +32,8 @@ export default function ClientForm() {
   const [status,  setStatus]  = useState(null);
   const [loading, setLoading] = useState(false);
 
+  // Holds the FULL client record now (not just rowIndex/name) — needed so
+  // generatePdf can send it straight to the backend without another lookup.
   const [client,     setClient]     = useState(null);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [pdfStatus,  setPdfStatus]  = useState(null);
@@ -55,7 +57,7 @@ export default function ClientForm() {
       );
 
       if (match) {
-        setClient({ rowIndex: match.rowIndex, name: match.name });
+        setClient(match); // full record, not a trimmed-down subset
         setView('ready');
       } else {
         const prefill = emptyForm();
@@ -107,7 +109,7 @@ export default function ClientForm() {
         return;
       }
 
-      setClient({ rowIndex: matched.rowIndex, name: matched.name });
+      setClient(matched); // full record
       setStatus(null);
       setView('ready');
     } catch {
@@ -125,16 +127,21 @@ export default function ClientForm() {
     setPdfStatus(null);
 
     try {
-      const res = await axios.get(`${API}/kundli/${client.rowIndex}/generate`);
+      // Sends the client data we already have — backend does zero lookup,
+      // just responds and starts generating/emailing in the background.
+      const res = await axios.post(`${API}/kundli/${client.rowIndex}/generate`, { client });
 
       if (!res.data.success) {
-        throw new Error(res.data.error || res.data.detail || 'PDF generation failed');
+        throw new Error(res.data.error || res.data.detail || 'Request failed');
       }
 
-      setPdfStatus({ ok: true, message: `✨ ${client.name}'s Kundli has been emailed to ${res.data.email}.` });
+      setPdfStatus({
+        ok: true,
+        message: `${client.name}'s Kundli is on its way — it'll be emailed to ${res.data.email} shortly (usually within ~2 minutes for a first-time generation, instantly if already generated before).`,
+      });
 
     } catch (err) {
-      let message = `PDF generation failed for ${client.name}.`;
+      let message = `Could not start PDF generation for ${client.name}.`;
       if (err.response?.data) {
         message = err.response.data.detail || err.response.data.error || message;
       } else if (err.message && !err.message.includes('Network')) {
@@ -255,7 +262,7 @@ export default function ClientForm() {
               onClick={generatePdf}
               disabled={pdfLoading}
             >
-              {pdfLoading ? 'Emailing…' : 'Email PDF'}
+              {pdfLoading ? 'Starting…' : 'Email PDF'}
             </button>
           </div>
 

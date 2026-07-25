@@ -16,19 +16,19 @@ export default function KundliPage() {
       .catch(() => setMessage({ ok: false, text: 'Could not load clients. Is the backend running?' }));
   }, []);
 
-  const generate = async (rowIndex, name) => {
-    setLoadingRow(rowIndex);
+  const generate = async (client) => {
+    setLoadingRow(client.rowIndex);
     setMessage(null);
     try {
-      const res = await axios.get(`${API}/kundli/${rowIndex}/generate`);
+      const res = await axios.post(`${API}/kundli/${client.rowIndex}/generate`, { client });
 
       if (!res.data.success) {
-        throw new Error(res.data.error || 'PDF generation failed');
+        throw new Error(res.data.error || 'Request failed');
       }
 
-      setMessage({ ok: true, text: `Kundli emailed to ${res.data.email} for ${name}.` });
+      setMessage({ ok: true, text: `${client.name}'s Kundli is on its way to ${res.data.email}.` });
     } catch {
-      setMessage({ ok: false, text: `PDF generation failed for ${name}.` });
+      setMessage({ ok: false, text: `Could not start PDF generation for ${client.name}.` });
     } finally {
       setLoadingRow(null);
     }
@@ -73,10 +73,10 @@ export default function KundliPage() {
                   <td>
                     <button
                       className="btn btn-gold btn-small"
-                      onClick={() => generate(c.rowIndex, c.name)}
+                      onClick={() => generate(c)}
                       disabled={loadingRow === c.rowIndex}
                     >
-                      {loadingRow === c.rowIndex ? 'Emailing…' : 'Email PDF'}
+                      {loadingRow === c.rowIndex ? 'Starting…' : 'Email PDF'}
                     </button>
                   </td>
                 </tr>
